@@ -8,7 +8,8 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const API_URL = "https://api.qr-code-generator.com/v1/create?access-token=teg5Ogia7Lm-TaT_9pVNMriHWYNrgxnuY9CHlOupmNyYlmXy52ZWgU9VtY7m66Y7";
+const API_URL =
+  "https://api.qr-code-generator.com/v1/create?access-token=teg5Ogia7Lm-TaT_9pVNMriHWYNrgxnuY9CHlOupmNyYlmXy52ZWgU9VtY7m66Y7";
 
 // Fungsi untuk memanggil API QR Code
 async function generateQRCode(text) {
@@ -36,16 +37,20 @@ app.post("/generate-qr", async (req, res) => {
   const { text, count } = req.body;
 
   if (!text || !count || count <= 0) {
-    return res.status(400).send("Input tidak valid. Pastikan 'text' dan 'count' diisi.");
+    return res
+      .status(400)
+      .send("Input tidak valid. Pastikan 'text' dan 'count' diisi.");
   }
 
-  const zipFilePath = path.join(__dirname, "qrcodes.zip");
+  // Nama file ZIP berdasarkan input teks
+  const sanitizedText = text.replace(/[^a-zA-Z0-9_-]/g, "_"); // Hindari karakter yang tidak valid
+  const zipFilePath = path.join(__dirname, `${sanitizedText}.zip`);
   const output = fs.createWriteStream(zipFilePath);
   const archive = archiver("zip", { zlib: { level: 9 } });
 
   output.on("close", () => {
     console.log(`ZIP file created: ${zipFilePath}`);
-    res.download(zipFilePath, "qrcodes.zip", (err) => {
+    res.download(zipFilePath, `${sanitizedText}.zip`, (err) => {
       if (err) console.error(err);
       fs.unlinkSync(zipFilePath); // Hapus file ZIP setelah diunduh
     });
@@ -59,10 +64,11 @@ app.post("/generate-qr", async (req, res) => {
   archive.pipe(output);
 
   for (let i = 1; i <= count; i++) {
-    const qrText = `${text} ${i}`;
+    const qrText = `${text} ${i}`; // Teks dalam QR Code
     try {
       const qrBuffer = await generateQRCode(qrText);
-      archive.append(qrBuffer, { name: `QRCode_${i}.png` });
+      const fileName = `${sanitizedText}_${i}.png`; // Nama file gambar dinamis
+      archive.append(qrBuffer, { name: fileName });
     } catch (error) {
       res.status(500).send(`Gagal membuat QR Code untuk: ${qrText}`);
       return;
